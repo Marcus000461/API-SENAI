@@ -3,8 +3,6 @@ package br.com.senai.dev_store.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,9 +11,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-
 import br.com.senai.dev_store.entity.Product;
+import br.com.senai.dev_store.exception.Response;
 import br.com.senai.dev_store.repository.ProductRepository;
 
 @RestController
@@ -26,38 +23,53 @@ public class ProductController {
     private ProductRepository repository;
 
     @PostMapping // localhost:8080/products/create
-    public Product criaProduto(@RequestBody Product entity){
+    public Product criaProduto(@RequestBody Product entity) {
         Product saved = repository.save(entity);
         return saved;
     }
 
     @GetMapping
-    public List<Product> retornaTodos(){
+    public List<Product> retornaTodos() {
         return repository.findAll();
-    } 
+    }
 
     @PutMapping("/{id}")
-    public Product atualizaProduto(@PathVariable Long id, @RequestBody Product entity){
-        Product productAntigo = repository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado"));
+    public Response atualizaProduto(@PathVariable Long id, @RequestBody Product entity) {
 
-        productAntigo.setDescricao(entity.getDescricao());
-        productAntigo.setDataCadastro(entity.getDataCadastro());
+        if (!repository.existsById(id)) {
+            return new Response(404, "Não encontrado");
+        }
+
+        Product productAntigo = repository.findById(id).get();
+
+        if (entity.getDataCadastro() != null) {
+            productAntigo.setDataCadastro(entity.getDataCadastro());
+
+        }
+
         productAntigo.setPreco(entity.getPreco());
+        if(entity.getPreco() !=null){
+             productAntigo.setPreco(entity.getPreco());
+        }
 
+        if (entity.getDescricao() != null) {
+            productAntigo.setDescricao(entity.getDescricao());
+        }
 
-        return repository.save(productAntigo);
+        repository.save(productAntigo);
+
+        return new Response(200, "Produto Atualizado");
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProduto(@PathVariable Long id){
-        if(!repository.existsById(id)){
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado");
+    public Response deleteProduto(@PathVariable Long id) {
+        if (!repository.existsById(id)) {
+            return new Response(404, "Não encontrado");
         }
 
         repository.deleteById(id);
 
-        return ResponseEntity.noContent().build();
+       return new Response(204, "Produto deletado");
     }
-
 
 }
